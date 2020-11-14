@@ -11,6 +11,30 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
         integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ=="
         crossorigin="anonymous"></script>
+    <style>
+        ul {
+            list-style-type: none;
+        }
+
+        li {
+            height: 50px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            padding: 5px;
+            font-size: 1.5em;
+            line-height: 1.5;
+            background-color: white;
+        }
+
+        li button {
+            outline: none !important;
+            border: none;
+            cursor: pointer;
+            background-color: white;
+            width: 100%;
+            text-align: left;
+        }
+    </style>
     <title>Weather Dashboard</title>
 </head>
 
@@ -22,66 +46,345 @@
     </header>
     <div class="container-fluid">
         <div class="row">
-            <div class="col-sm-3 bg-danger pt-2">
+            <div class="col-sm-3 pt-2 bg-light">
+                <h3>Search for a City:</h3>
                 <form class="form-inline my-2 my-lg-0" id="citySearch">
-                    <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" id="cityInput">
-                    <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                    <input class="form-control mr-sm-2" type="search" aria-label="Search" id="cityInput"
+                        placeholder="Enter City Here">
+                    <button class="btn btn-outline-primary my-2 my-sm-0" type="submit">Search</button>
                 </form>
+                <br>
                 <div id="previousCities">
-                    
+                    <ul id="cityList"></ul>
                 </div>
             </div>
 
-            <div class="col bg-info" id="main">
-                <div class="row bg-primary pt-2">
-                    thi sis primary
+            <div class="col" id="main">
+                <div class="row pt-2">
+                    <div class="col rounded m-3 border border-muted">
+                        <div class="city"></div>
+                        <br>
+                        <div class="tempF"></div>
+                        <br>
+                        <div class="humidity"></div>
+                        <br>
+                        <div class="wind"></div>
+                        <br>
+                        <div>UV Indev: <span id="uv"></span></div>
+                        <br>
+
+                    </div>
                 </div>
-                <div class="row bg-secondary pt-2">
-                    this is secondary
+                <div class="row pt-2">
+                    <div class="col-12">
+                        <h3>5-Day Forecast:</h3>
+                    </div>
+                    <div class="col m-3 p-2 bg-primary text-white rounded" id="day1">
+                        <p>
+                            <span id="date1" class="h5"></span>
+                        </p>
+                        <span id="iconD1"></span>
+                        <br>
+                        <p>
+                            Temp: <span id="tempD1"></span> &#8457
+                        </p>
+                        Humidity: <span id="humidyD1"></span>
+                    </div>
+                    <div class="col m-3 p-2 bg-primary text-white rounded" id="day2">
+                        <p>
+                            <span id="date2" class="h5"></span>
+                        </p>
+                        <span id="iconD2"></span>
+                        <br>
+                        <p>
+                            Temp: <span id="tempD2"></span> &#8457
+                        </p>
+                        Humidity: <span id="humidyD2"></span>
+                    </div>
+                    <div class="col m-3 p-2 bg-primary text-white rounded" id="day3">
+                        <p>
+                            <span id="date3" class="h5"></span>
+                        </p>
+                        <span id="iconD3"></span>
+                        <br>
+                        <p>
+                            Temp: <span id="tempD3"></span> &#8457
+                        </p>
+                        Humidity: <span id="humidyD3"></span>
+                    </div>
+                    <div class="col m-3 p-2 bg-primary text-white rounded" id="day4">
+                        <p>
+                            <span id="date4" class="h5"></span>
+                        </p>
+                        <span id="iconD4"></span>
+                        <br>
+                        <p>
+                            Temp: <span id="tempD4"></span> &#8457
+                        </p>
+                        Humidity: <span id="humidyD4"></span>
+                    </div>
+                    <div class="col m-3 p-2 bg-primary text-white rounded" id="day5">
+                        <p>
+                            <span id="date5" class="h5"></span>
+                        </p>
+                        <span id="iconD5"></span>
+                        <br>
+                        <p>
+                            Temp: <span id="tempD5"></span> &#8457
+                        </p>
+                        Humidity: <span id="humidyD5"></span>
+                    </div>
                 </div>
             </div>
         </div>
 
     </div>
 
+    <!--Begin script here-->
+
     <script>
-        var searched = [];
-        var searchedSet = new Set("");
-        var searchedName = JSON.parse(localStorage.getItem("searched"));
-        if(searchedName != null){
-            searched = searchedName;
-            searchedSet = new Set(searched);
+        //current date using moment.js
+        var currentDate = moment().format("MM/DD/YYYY");
+
+        // This is my API key
+        var APIKey = "166a433c57516f51dfab1f7edaed8413";
+        var input = $("#cityInput").val();
+        var inputArr = [];
+        var city = "";
+        var state = "";
+        var defaultInput = JSON.parse(localStorage.getItem("lastCitySearched"));
+        
+        if (defaultInput != null) {
+            newForecast(defaultInput);
+        } else {
+            newForecast("Charlotte");
         }
+
+
+        // Here we are building the URL we need to query the database
+        function newForecast(input) {
+            saveLastSearch(input);
+            setForecastDates();
+            var inputArr = [];
+            inputArr = input.split(",");
+            city = inputArr[0];
+            state = inputArr[1];
+            var queryURL = "https://api.openweathermap.org/data/2.5/weather?q="
+                + city + "," + state + "&appid=" + APIKey;
+
+            $.ajax({
+                url: queryURL,
+                method: "GET"
+            })
+                // starting response function
+                .then(function (response) {
+
+                    //declaring variables for icon code, url and image. 
+                    var iconCode = response.weather[0].icon;
+                    var iconURL = "http://openweathermap.org/img/w/" + iconCode + ".png";
+                    var iconImage = '<img id="icon" src="' + iconURL + '" alt="weather icon">';
+
+                    // Transfer content to HTML
+                    $(".city").html("<h2>" + response.name + " " + currentDate + " " + iconImage + "</h2>");
+                    $(".wind").text("Wind Speed: " + response.wind.speed);
+                    $(".humidity").text("Humidity: " + response.main.humidity);
+
+
+                    // Convert the temp to fahrenheit
+                    var tempF = (response.main.temp - 273.15) * 1.80 + 32;
+
+                    // add temp content to html
+                    $(".temp").text("Temperature (K) " + response.main.temp);
+                    $(".tempF").text("Temperature (F) " + tempF.toFixed(2));
+
+
+                    //Declaring longitude and latitude variables to use in uv API
+                    var latitude = response.coord.lat;
+                    var longitude = response.coord.lon;
+                    
+                    var uvURL = "http://api.openweathermap.org/data/2.5/uvi?lat=" + latitude + "&lon=" + longitude + "&appid=" + APIKey;
+                    
+
+
+                    $.ajax({
+                        url: uvURL,
+                        method: "GET"
+                    })
+                        //getting information from response2
+                        .then(function (response2) {
+
+                            var uv = response2.value;
+                            $("#uv").text(uv);
+                            if (uv > 8) {
+                                $("#uv").attr("class", "p-2 rounded bg-danger");
+                            } else if (4 < uv && uv < 8) {
+                                $("#uv").attr("class", "p-2 rounded bg-warning");
+                            } else if (uv < 4) {
+                                $("#uv").attr("class", "p-2 rounded bg-success");
+                            }
+                        });
+
+
+                });
+
+            var fiveDayURL = "https://api.openweathermap.org/data/2.5/forecast?q=" + input + "&appid=" + APIKey;
+
+
+            $.ajax({
+                url: fiveDayURL,
+                method: "GET"
+            })
+
+                .then(function (response3) {
+                    //will be using the noon forecast of each day
+                    //starting at node list[4], and adding 8 to get to noon the next day
+
+                    function setForecastTemperature() {
+
+                        // first day at noon
+                        $("#tempD1").text(((response3.list[4].main.temp - 273.15) * 1.80 + 32).toFixed(2));
+
+                        // second day at nooon
+                        $("#tempD2").text(((response3.list[12].main.temp - 273.15) * 1.80 + 32).toFixed(2));
+                        // third day at nooon
+                        $("#tempD3").text(((response3.list[20].main.temp - 273.15) * 1.80 + 32).toFixed(2));
+                        // fourth day at nooon
+                        $("#tempD4").text(((response3.list[28].main.temp - 273.15) * 1.80 + 32).toFixed(2));
+                        // fifth day at nooon
+                        $("#tempD5").text(((response3.list[36].main.temp - 273.15) * 1.80 + 32).toFixed(2));
+                    }
+                    // call functions that set weather, forecast icons, and humididty for the next 5 days
+                    setForecastTemperature();
+                    setForecastIcons();
+                    setForecastHumidity();
+
+                    // creating function that sets forecast icons
+                    function setForecastIcons() {
+
+                        //declaring variables to facilitate putting together the search for forecast icons
+                        var iconLeft = '<img id="icon" src="http://openweathermap.org/img/w/';
+                        var iconRight = '.png" alt="weather icon">';
+
+                        $("#iconD1").html(iconLeft + response3.list[4].weather[0].icon + iconRight);
+                        $("#iconD2").html(iconLeft + response3.list[12].weather[0].icon + iconRight);
+                        $("#iconD3").html(iconLeft + response3.list[20].weather[0].icon + iconRight);
+                        $("#iconD4").html(iconLeft + response3.list[28].weather[0].icon + iconRight);
+                        $("#iconD5").html(iconLeft + response3.list[36].weather[0].icon + iconRight);
+                    }
+
+                    // function for 5 day forecast humidty
+                    function setForecastHumidity() {
+
+                        // first day at noon
+                        $("#humidyD1").text(response3.list[4].main.humidity);
+
+                        // second day at nooon
+                        $("#humidyD2").text(response3.list[12].main.humidity);
+                        $("#humidyD3").text(response3.list[20].main.humidity);
+                        $("#humidyD4").text(response3.list[28].main.humidity);
+                        $("#humidyD5").text(response3.list[36].main.humidity);
+                    }
+
+                });
+        }
+
+        // first array to hold searched values
+        var searched = [];
+        // second array that will only hold unique values/ no duplicates
+        var searchedUnique = [];
+
+        // getting information from local storage
+        var searchedName = JSON.parse(localStorage.getItem("searchedUnique"));
+        if (searchedName != null) {
+            searchedUnique = searchedName;
+
+        }
+        // calling function to create a history of cities searched
         setHistory();
 
-        $("#citySearch").submit((function(){
+        //click event listener. 
+        $("#citySearch").submit((function () {
             event.preventDefault();
             var input = $("#cityInput").val();
-            if(input != null && input != ""){
-            searched.push(input);
-           //searched.add(input);
-            searchedSet = new Set(searched);
-            console.log(searched);
-            console.log(searchedSet);
-            localStorage.setItem("searched", JSON.stringify(searched));
-            setHistory();
+            inputArr = input.split(",");
+            
+            city = inputArr[0];
+            state = inputArr[1];
+            //checking to make sure input is not empty or null
+            if (input != null && input != "") {
+                if (searchedUnique.length == 0) {
+                    searchedUnique.push(input);
+                }
+                //looping through searchedUnique array
+                for (i = 0; i < searchedUnique.length; i++) {
+                    if ($.inArray(input, searchedUnique) === -1) searchedUnique.push(input);
+                }
+                
+                //setting informatino in localStorage
+                localStorage.setItem("searchedUnique", JSON.stringify(searchedUnique));
+
+
+                setHistory();
+                newForecast(input);
+
             }
         }));
+        
+        // creating function to set history of searched cities
+        function setHistory() {
 
-        function setHistory(){
-            $("#previousCities").remove();
-            $("#citySearch").after('<div id="previousCities"></div>');
-            var i = 0;
-            for(item of searchedSet.values()){
-                $("#previousCities").append("<br><hr>" + item);
+            //clearing the city list to avoid duplicate buttons
+            $("#cityList").remove();
+
+            //appending ul to previous cities id
+            $("#previousCities").append('<ul id="cityList"></ul>');
+            for (i = 0; i < searchedUnique.length; i++) {
+                // creating list element
+                var cityLi = $("<li>");
+                cityLi.attr("class", "rounded border border-muted")
+                // creating button element
+                var cityBtn = $("<button>");
+                // Adding a data-attribute with a value of the city at index i
+                cityBtn.attr("data-index", i);
+                // Providing the button's text with a value of the city at index i
+                cityBtn.text(searchedUnique[i]);
+                // Adding the button to the HTML
+                cityLi.append(cityBtn);
+                // appending list item to city list on HTML
+                $("#cityList").append(cityLi);
             }
         }
 
+        // creating a function to save the last city searched in local storage
+        function saveLastSearch(lastCitySearched) {
+            localStorage.setItem("lastCitySearched", JSON.stringify(lastCitySearched));
+        }
 
+        // creating function to set forecast date values on to the HTML 
+        function setForecastDates() {
+            $("#date1").text(moment().add(1, 'days').format("MM/DD/YYYY"));
+            $("#date2").text(moment().add(2, 'days').format("MM/DD/YYYY"));
+            $("#date3").text(moment().add(3, 'days').format("MM/DD/YYYY"));
+            $("#date4").text(moment().add(4, 'days').format("MM/DD/YYYY"));
+            $("#date5").text(moment().add(5, 'days').format("MM/DD/YYYY"));
+        }
+
+        //adding a click event listener that will dynamically create buttons of the cities in the history search
+        $("#previousCities").on("click", "button", function () {
+            // button will target the data-index
+            if ($(this).is("button")) {
+                var inputIndex = $(this).data("index");
+                //console.log(inputIndex);
+                var cityClick = searchedUnique[inputIndex];
+                //console.log(cityClick);
+                newForecast(cityClick);
+
+            }
+        });
 
     </script>
+    <!--^ end of  script ^-->
 
-    
 
 </body>
 
