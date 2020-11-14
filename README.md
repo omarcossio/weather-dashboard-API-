@@ -26,6 +26,6 @@ THEN I am presented with the last searched city forecast
 
 A photo of the demo can be seen here: (./06-server-side-apis-homework-demo.png)
 
-* The URL of the deployed application.
+* The URL of the deployed application: https://omarcossio.github.io/weather-dashboard-API-/
 
-* The URL of the GitHub repository. Give the repository a unique name and include a README describing the project.
+* The URL of the GitHub repository: https://github.com/omarcossio/weather-dashboard-API-
